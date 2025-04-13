@@ -2,13 +2,18 @@ import streamlit as st
 import numpy as np
 import joblib
 from PIL import Image
+import os
+import traceback
 
-# تحميل النماذج
-# تغيير مسارات تحميل النماذج لاستخدام المسارات النسبية
-scaler = joblib.load("./Models/scaler.pkl")
-pca = joblib.load("./Models/pca.pkl")
-selector = joblib.load("./Models/selector.pkl")
-model = joblib.load("./Models/model.pkl")
+# تحميل النماذج باستخدام مسارات نسبية
+try:
+    scaler = joblib.load("./Models/scaler.pkl")
+    pca = joblib.load("./Models/pca.pkl")
+    selector = joblib.load("./Models/selector.pkl")
+    model = joblib.load("./Models/model.pkl")
+except Exception as e:
+    st.error(f"Error loading model files: {e}")
+    st.stop()
 
 # قائمة أسماء الوظائف
 class_names = [
@@ -40,9 +45,10 @@ def map_experience(value):
 def main():
     st.set_page_config(page_title="Career Path Recommender", page_icon="💼", layout="wide")
     
-    # إضافة شعار أو صورة (اختياري)
-    image = Image.open('career_image.jpg')  # احفظ صورة في نفس المجلد
-    st.image(image, use_column_width=True)
+    # عرض صورة في البداية (اختياري مع التحقق من وجودها)
+    if os.path.exists('career_image.jpg'):
+        image = Image.open('career_image.jpg')
+        st.image(image, use_column_width=True)
     
     st.title("Career Path Recommendation System")
     st.markdown("""
@@ -55,7 +61,7 @@ def main():
     
     st.markdown('<p class="big-font">Please rate your skills/interest in the following areas:</p>', unsafe_allow_html=True)
     
-    # إنشاء نموذج الإدخال
+    # نموذج الإدخال
     with st.form("career_form"):
         col1, col2 = st.columns(2)
         
@@ -82,10 +88,9 @@ def main():
         
         submitted = st.form_submit_button("Get Career Recommendations")
     
-    # معالجة النموذج عند الإرسال
     if submitted:
         try:
-            # تحويل المدخلات إلى مصفوفة
+            # تحويل المدخلات لمصفوفة
             feature_array = np.array([[
                 map_experience(db_fundamentals),
                 map_experience(comp_arch),
@@ -106,16 +111,15 @@ def main():
                 map_experience(graphics)
             ]])
             
-            # تطبيق التحجيم و PCA و Feature Selection
+            # تطبيق التحجيم وPCA وFeature Selection
             scaled_features = scaler.transform(feature_array)
             pca_features = pca.transform(scaled_features)
             selected_features = selector.transform(pca_features)
             
-            # الحصول على التوصيات
+            # التنبؤ
             probabilities = model.predict_proba(selected_features)
             top_classes_idx = np.argsort(-probabilities[0])[:3]
             
-            # عرض النتائج
             st.success("Here are your top 3 recommended career paths:")
             
             for i, idx in enumerate(top_classes_idx):
@@ -123,12 +127,16 @@ def main():
                     st.markdown(f"""
                     <div style="background-color:#f0f2f6;padding:20px;border-radius:10px;margin:10px 0;">
                         <h3>#{i+1}: {class_names[idx]}</h3>
-                        <p>Probability: {probabilities[0][idx]:.2%}</p>
+                        
                     </div>
                     """, unsafe_allow_html=True)
-            
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
+            st.text(traceback.format_exc())
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        st.error(f"Runtime error: {e}")
+        st.text(traceback.format_exc())
