@@ -4,10 +4,11 @@ import joblib
 from PIL import Image
 
 # تحميل النماذج
-scaler = joblib.load("Models/scaler.pkl")
-pca = joblib.load("Models/pca.pkl")
-selector = joblib.load("Models/selector.pkl")
-model = joblib.load("Models/model.pkl")
+# تغيير مسارات تحميل النماذج لاستخدام المسارات النسبية
+scaler = joblib.load("./Models/scaler.pkl")
+pca = joblib.load("./Models/pca.pkl")
+selector = joblib.load("./Models/selector.pkl")
+model = joblib.load("./Models/model.pkl")
 
 # قائمة أسماء الوظائف
 class_names = [
